@@ -35,11 +35,9 @@ backend_status = ""
 
 def authorize(renew_tokenfile=False):
     global refresh_token
-
-    token_path = util.get_token_path()
-    if os.path.isfile(token_path) and not renew_tokenfile:
+    if os.path.isfile(".token") and not renew_tokenfile:
         logging.info("Using login from token file")
-        f = open(token_path)
+        f = open('.token')
         data = json.load(f)
         refresh_token = data["refresh_token"]
         refresh_auth()
@@ -93,7 +91,7 @@ def authorize(renew_tokenfile=False):
             token_expires_at = datetime.now(util.TZ) + timedelta(seconds=(token_data["expires_in"] - 30))
             refresh_token = token_data["refresh_token"]
 
-            util.save_to_json(token_data, token_path)
+            util.save_to_json(token_data)
         else:
             message = auth.json()
             raise Exception(message["details"][0]["userMessage"])
@@ -156,6 +154,7 @@ def send_otp(auth_session, data):
     if not mqtt.otp_code:
         raise Exception ("No OTP found, exting...")
 
+    mqtt.delete_otp_input()
     auth = auth_session.post(next_url, data=json.dumps(body))
     if auth.status_code == 200:
         return auth.json()
@@ -187,7 +186,7 @@ def refresh_auth():
     if auth.status_code == 200:
         token_path = util.get_token_path()
         data = auth.json()
-        util.save_to_json(data, token_path)
+        util.save_to_json(data)
         session.headers.update({"authorization": "Bearer " + data["access_token"]})
 
         global token_expires_at

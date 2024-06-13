@@ -42,16 +42,8 @@ def get_volvo_app_version():
     else:
         return "5.37.0"
 
-def get_token_path():
-    token_path = ".token"
-    if os.environ.get("IS_HA_ADDON"):
-        check_existing_folder("/addons/volvo2mqtt/token/")
-        token_path = "/addons/volvo2mqtt/token/.token"
-
-    return token_path
-
-def save_to_json(data, token_path):
-    with open(token_path, 'w', encoding='utf-8') as f:
+def save_to_json(data):
+    with open('.token', 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 def get_icon_between(icon_list, state):

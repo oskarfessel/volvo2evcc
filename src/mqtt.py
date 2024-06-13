@@ -47,7 +47,6 @@ def connect():
 
 
 def create_otp_input():
-    state_topic = otp_mqtt_topic + "/state"
     config = {
         "name": "Volvo OTP",
         "object_id": f"volvo_otp",
@@ -60,24 +59,16 @@ def create_otp_input():
         "mode": "text"
     }
 
+
     mqtt_client.publish(
-        "homeassistant/text/volvoAAOS2mqtt/volvo_otp/config",
+        f"homeassistant/text/volvoAAOS2mqtt/volvo_otp/config",
         json.dumps(config),
         retain=True
     )
 
-    mqtt_client.publish(
-        state_topic,
-        "000000",
-        retain=True
-    )
-
-def set_otp_state():
-    mqtt_client.publish(
-        otp_mqtt_topic + "/state",
-        otp_code,
-        retain=True
-    )
+def delete_otp_input():
+    topic = "homeassistant/text/volvoAAOS2mqtt/volvo_otp/config"
+    mqtt_client.publish(topic, payload="", retain=True)
 
 
 def send_car_images(vin, data, device):
@@ -131,12 +122,8 @@ def on_disconnect(client, userdata, rc):
 def on_message(client, userdata, msg):
     payload = msg.payload.decode("UTF-8")
     if msg.topic == otp_mqtt_topic:
-        if msg.retain == 0:
-            global otp_code
-            otp_code = payload
-            set_otp_state()
-        else:
-            logging.warning("Found retained OTP, this can't work! Please clean retained messages!")
+        global otp_code
+        otp_code = payload
         return None
     else:
         try:
