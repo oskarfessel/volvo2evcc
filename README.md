@@ -16,6 +16,7 @@ The following steps are required for authentication in exactly this order:
 5. Paste the OTP code to the prompt on the command line
 6. Now the script should be running and you can send the process to the background by typing ^Z bg and close the terminal
 
+<b>NOTE: Needs to be run with python3. If you get error messages on startup this is typically, because some library is not installed. Check the error message, copy the name of the library and do `pip3 install NAME_OF_LIBRARY`</b>
 
 ## evcc setup
 <b>evcc.yaml:</b>
@@ -46,5 +47,6 @@ vehicles:
 ### TODOs
 * URL and PORT is currently hardcoded in main.py - Please change it there to your needs.
 * Cleanup code and configs from mqtt code
+* Check needed libraries to add them to the README
 
 <b>NOTE: This is the first version, currently tested with my car. Working so far, but still in ALPHA status</b>
