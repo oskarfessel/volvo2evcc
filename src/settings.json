@@ -1,8 +1,8 @@
 {
-  "updateInterval": 300,
+  "updateInterval": 60,
   "babelLocale": "de",
   "TZ": "Europe/Berlin",
-  "debug": false,
+  "debug": true,
   "disable_logging": false,
   "mqtt": {
     "broker": "",
@@ -11,10 +11,10 @@
     "password": ""
   },
   "volvoData": {
-    "username": "",
-    "password": "",
-    "vin": "",
-	"vccapikey": [],
+    "username": "VOLVO_ID_USERNAME",
+    "password": "VOLVO_ID_PW",
+    "vin": "YOUR_VOLVO_VIN",
+	"vccapikey": ["VOLVO_API_KEY"],
     "odometerMultiplier": "",
     "averageSpeedDivider": "",
     "averageFuelConsumptionMultiplier": ""

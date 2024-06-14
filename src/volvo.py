@@ -1,7 +1,6 @@
 import json
 import logging
 import requests
-import mqtt
 import util
 import time
 import re
@@ -58,6 +57,7 @@ def authorize(renew_tokenfile=False):
                       "&scope=openid email profile care_by_volvo:financial_information:invoice:read care_by_volvo:financial_information:payment_method care_by_volvo:subscription:read customer:attributes customer:attributes:write order:attributes vehicle:attributes tsp_customer_api:all conve:brake_status conve:climatization_start_stop conve:command_accessibility conve:commands conve:diagnostics_engine_status conve:diagnostics_workshop conve:doors_status conve:engine_status conve:environment conve:fuel_status conve:honk_flash conve:lock conve:lock_status conve:navigation conve:odometer_status conve:trip_statistics conve:tyre_status conve:unlock conve:vehicle_relation conve:warnings conve:windows_status energy:battery_charge_level energy:charging_connection_status energy:charging_system_status energy:electric_range energy:estimated_charging_time energy:recharge_status vehicle:attributes")
 
         auth = auth_session.get(OAUTH_AUTH_URL + url_params)
+        logging.info("auth.status_code = " + str(auth.status_code))
         if auth.status_code == 200:
             response = auth.json()
             auth_state = response["status"]
@@ -99,7 +99,7 @@ def authorize(renew_tokenfile=False):
     get_vcc_api_keys()
     get_vehicles()
     check_supported_endpoints()
-    Thread(target=backend_status_loop).start()
+    #Thread(target=backend_status_loop).start()
 
 def continue_auth(auth_session, data):
     next_url = data["_links"]["continueAuthentication"]["href"] + "?action=continueAuthentication"
@@ -129,7 +129,7 @@ def check_username_password(auth_session, data):
     body = {"username": settings.volvoData["username"],
              "password": settings.volvoData["password"]}
     auth = auth_session.post(next_url, data=json.dumps(body))
-
+    logging.info("Auth body: " + str(body))
     if auth.status_code == 200:
         return auth.json()
     else:
@@ -138,23 +138,9 @@ def check_username_password(auth_session, data):
 
 
 def send_otp(auth_session, data):
-    mqtt.create_otp_input()
     next_url = data["_links"]["checkOtp"]["href"] + "?action=checkOtp"
     body = {"otp": ""}
-
-    for i in range(otp_max_loops):
-        if mqtt.otp_code:
-            body["otp"] = mqtt.otp_code
-            break
-
-        logging.info("Waiting for otp code... Please check your mailbox and post your otp code to the following "
-                     "mqtt topic \"volvoAAOS2mqtt/otp_code\". Retry " + str(i) + "/" + str(otp_max_loops))
-        time.sleep(5)
-
-    if not mqtt.otp_code:
-        raise Exception ("No OTP found, exting...")
-
-    mqtt.delete_otp_input()
+    body["otp"] = input("Enter one-time-password from e-mail:") 
     auth = auth_session.post(next_url, data=json.dumps(body))
     if auth.status_code == 200:
         return auth.json()
@@ -184,7 +170,6 @@ def refresh_auth():
         return None
 
     if auth.status_code == 200:
-        token_path = util.get_token_path()
         data = auth.json()
         util.save_to_json(data)
         session.headers.update({"authorization": "Bearer " + data["access_token"]})
@@ -224,7 +209,7 @@ def get_vehicles():
     else:
         initialize_climate(vins)
         initialize_scheduler(vins)
-        mqtt.delete_old_entities()
+        #mqtt.delete_old_entities()
         logging.info("Vin: " + str(vins) + " found!")
 
 
@@ -244,10 +229,9 @@ def get_vcc_api_keys(used_key=None):
         if len(working_keys) < 1:
             used_key = None
             logging.warning("No working VCCAPIKEY found, waiting 10 minutes. Then trying again!")
-            mqtt.send_offline()
+            #mqtt.send_offline()
             time.sleep(600)
         else:
-            mqtt.send_heartbeat()
             session.headers.update({"vcc-api-key": working_keys[0]})
             logging.info("Using VCCAPIKEY: " + working_keys[0])
             for key_dict in vcc_api_keys:
@@ -328,7 +312,7 @@ def get_vehicle_details(vin):
             "model": data['descriptions']['model'],
             "name": f"{data['descriptions']['model']} ({data['modelYear']}) - {vin}",
         }
-        mqtt.send_car_images(vin, data, device)
+        #mqtt.send_car_images(vin, data, device)
     elif response.status_code == 500 and not settings.volvoData["vin"]:
         # Workaround for some cars that are not returning vehicle details
         device = {
@@ -369,21 +353,22 @@ def check_supported_endpoints():
 def initialize_scheduler(vins):
     for vin in vins:
         topic = f"homeassistant/schedule/{vin}/command"
-        mqtt.active_schedules[vin] = {"timers": []}
-        mqtt.subscribed_topics = [topic]
-        mqtt.mqtt_client.subscribe(topic)
+        #mqtt.active_schedules[vin] = {"timers": []}
+        #mqtt.subscribed_topics = [topic]
+        #mqtt.mqtt_client.subscribe(topic)
 
 
 def initialize_climate(vins):
     for vin in vins:
-        mqtt.assumed_climate_state[vin] = "OFF"
+        logging.info("vin: " + str(vin))
+        #mqtt.assumed_climate_state[vin] = "OFF"
 
 
 def disable_climate(vin):
     logging.info("Turning climate off by timer!")
-    mqtt.engine_status[vin].do_run = False
-    mqtt.assumed_climate_state[vin] = "OFF"
-    mqtt.update_car_data()
+    #mqtt.engine_status[vin].do_run = False
+    #mqtt.assumed_climate_state[vin] = "OFF"
+    #mqtt.update_car_data()
 
 
 def check_lock_status(vin, old_state):
@@ -397,7 +382,7 @@ def check_lock_status(vin, old_state):
         lock_state = api_call(LOCK_STATE_URL, "GET", vin, "lock_status", True)
         time.sleep(2)
 
-    mqtt.update_car_data()
+    #mqtt.update_car_data()
 
 
 def check_engine_status(vin):
@@ -416,8 +401,8 @@ def check_engine_status(vin):
     while getattr(t, "do_run", True):
         engine_state = api_call(endpoint_url, "GET", vin, "engine_state", True)
         if engine_state == "ON":
-            mqtt.assumed_climate_state[vin] = "OFF"
-            mqtt.update_car_data()
+            #mqtt.assumed_climate_state[vin] = "OFF"
+            #mqtt.update_car_data()
             break
         time.sleep(5)
 
@@ -490,8 +475,8 @@ def api_call(url, method, vin, sensor_id=None, force_update=False, key_change=Fa
         logging.debug(response.text)
         if url == CLIMATE_START_URL and response.status_code == 503:
             logging.warning("Car in use, cannot start pre climatization")
-            mqtt.assumed_climate_state[vin] = "OFF"
-            mqtt.update_car_data()
+            #mqtt.assumed_climate_state[vin] = "OFF"
+            #mqtt.update_car_data()
         elif "extended-vehicle" in url and response.status_code == 403:
             # Suppress 403 errors for unsupported extended-vehicle api cars
             logging.debug("Suppressed 403 for extended-vehicle API")

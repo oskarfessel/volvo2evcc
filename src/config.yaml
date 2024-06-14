@@ -1,13 +1,9 @@
 name: "Volvo2Mqtt"
 description: "Volvo AAOS MQTT bridge"
-<<<<<<< HEAD
 version: "1.9.3"
-=======
-version: "1.9.0"
->>>>>>> otp_auth
-slug: "volvo2mqtt"
+slug: "volvo2evcc"
 init: false
-url: "https://github.com/Dielee/volvo2mqtt"
+url: "https://github.com/jobe39/volvo2evcc"
 apparmor: true
 codenotary: notary@home-assistant.io
 services:
@@ -26,11 +22,11 @@ options:
     username: "auto_user"
     password: "auto_password"
   volvoData:
-    username: null
-    password: null
-    vin: ""
+    username: VOLVO_ID_USER
+    password: VOLVO_ID_PW
+    vin: "YOUR_VOLVO_VIN"
     vccapikey:
-        - null
+        - VOLVO_API_KEY 
     odometerMultiplier: 1
     averageSpeedDivider: 1
     averageFuelConsumptionMultiplier: 1
