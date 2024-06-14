@@ -1,135 +1,50 @@
-# Volvo2Mqtt
-![Supports aarch64 Architecture][aarch64-shield]
-![Supports amd64 Architecture][amd64-shield]
-![Supports armhf Architecture][armhf-shield]
-![Supports armv7 Architecture][armv7-shield]
-![Supports i386 Architecture][i386-shield]
-<br>
-![Project Maintenance][maintenance-shield]
-[![GitHub Release][releases-shield]][releases]
-[![GitHub Activity][commits-shield]][commits]
-
-This component establishes a connection between the newer AAOS Volvo cars and Home Assistant via MQTT.<br>
-Maybe this component works also with other Volvo cars. Please try out the native Volvo [integration](https://www.home-assistant.io/integrations/volvooncall/) before using this component! If the native component doesn't work for your car, try this mqtt bridge.
+# Volvo2evcc
+This component is based on Volvo2MQTT and creates a REST service that can be used for evcc vehicle data. This is only needed if the evcc volvo implementation does not fit your car (e.g. new electric models, that only support api version 2). This version implements the OTP login, like the original VOLVO App does, to access volvo electric vehicle API v2.
 <p>
 
-Home Assistant thread can be found [here](https://community.home-assistant.io/t/volvo2mqtt-connect-your-aaos-volvo/585699).
-
 <b>Important note: The Volvo api currently ONLY works in these [countries](https://developer.volvocars.com/terms-and-conditions/apis-supported-locations/)</b>
-
-If you like my work:<br>
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/U7U8MFXCF)
-
-## Confirmed working with
-- XC40 BEV (2024)
-- XC40 BEV (2023)
-- XC40 BEV (2022)
-- XC40 PHEV (2021)
-- V60 T8 PHEV (2023)
-- C40 BEV (2023)
-- C40 BEV (2022)
-- C40 BEV (2024)
-- XC90 T8 PHEV (2023)
-- XC60 PHEV (2024)
-- XC60 PHEV (2023)
-- XC60 PHEV (2022)
-- XC60 B5 Mildhybrid (2023)
-- XC90 PHEV T8 (2023)
-- XC90 PHEV T8 (2024)
-- XC90 B5 Mildhybrid (2024)
-- V90 PHEV T8 (2019)*
-- V90 PHEV T6 (2024)
-- V90 B5 Mildhybrid (2023)
-
-*only partly working
-
-Please let me know if your car works with this addon so I can expand the list!<br>
-
-
-## Supported features
-- Lock/unlock car
-- Start/stop climate
-- Sensor "Battery Charge Level"
-- Sensor "Battery Capacity"
-- Sensor "Electric Range"
-- Sensor "Charging System Status"
-- Sensor "Charging Connection Status" (partly broken since 2.10 car update)
-- Sensor "Estimated Charging Finish Time"
-- Sensor "Door Lock Status (All doors, tank lid, and engine hood)"
-- Sensor "Window Lock Status (All windows and sunroof - Thanks to @navet)"
-- Sensor "Engine Status"
-- Sensor "Odometer"
-- Sensor "Tire Status"
-- Sensor "Fuel Status"
-- Sensor "Average Fuel Consumption"
-- Sensor "Average Speed"
-- Sensor "Distance to Empty"
-- Sensor "Hours to Service"
-- Sensor "Distance to Service"
-- Sensor "Months to Service"
-- Sensor "Service warning status"
-- Sensor "Service warning trigger"
-- Car Device Tracker
-- Multiple cars
-
-NOTE: Energy status currently available only for cars in the Europe / Middle East / Africa regions. [source](https://developer.volvocars.com/apis/energy/v1/overview/#availability)
 
 ## OTP Authentication
 
 As of version <b>v1.9.0</b>, this addon uses the same OTP authentication as the Volvo app. 
 The following steps are required for authentication in exactly this order:
 
-1. Setup volvo2Mqtt, either via Docker, or via HA addon (take a look at the "Setup" section below)
-2. Fill in your settings and start volvo2Mqtt
-3. Your log will show the following lines <br> 
-```Waiting for otp code... Please check your mailbox and post your otp code to the following mqtt topic "volvoAAOS2mqtt/otp_code". Retry 0/15```<br>
-```Waiting for otp code... Please check your mailbox and post your otp code to the following mqtt topic "volvoAAOS2mqtt/otp_code". Retry 1/15```<br>
-```etc ...```
+1. Setup volvo2evcc, by checking out this repository
+2. Enter your settings into settings.json and start volvo2evcc with Python3 (python3 volvo2evcc.py)
+3. The script logs in using your credentials from settings.json and an e-mail to your VOLVO ID mail should be generated
 4. Now, open your mailbox and copy your OTP Code
-5. Open HomeAssistant and search for the entity ID ```text.volvo_otp```
-6. Paste your OTP into the text entity and press Enter
-7. If everything has worked, your addon is now authenticated. In the future, OTP authentication only needs to be done when updating, not when restarting the container.
-
-## Setup
-<b>Docker:</b>
-
-Just install this addon with the following command.
-Please note to fill in your settings inside the environment variables.
-
-`docker run -d --pull=always -e CONF_updateInterval=300 -e CONF_babelLocale='de' -e CONF_mqtt='@json {"broker": "", "username": "", "password": "", "port": 1883}' -e CONF_volvoData='@json {"username": "", "password": "", "vin": "", "vccapikey": ["key1", "key2"], "odometerMultiplier": 1, "averageSpeedDivider": 1, "averageFuelConsumptionMultiplier": 1}' -e TZ='Europe/Berlin' --name volvo2mqtt ghcr.io/dielee/volvo2mqtt:latest`
-
-<b>HA Add-On:</b><br>
-
-[![Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FDielee%2Fvolvo2mqtt)
-
-Here is what every option means:
-
-| Environment Variable Name |   Type    | Json Option                           |   Default    | Description                                                     |
-| ------------------------- | :-------: | :-----------------------------------: | :----------: | --------------------------------------------------------------- |
-| `CONF_updateInterval`     | `int`     |                                       | **required** | Update intervall in seconds.                                     |
-| `CONF_babelLocale`        | `string`  |                                       | **required** | Select your country from this [list](https://www.ibm.com/docs/en/radfws/9.7?topic=overview-locales-code-pages-supported). "Locale name" is the column you need!                                        |
-| `CONF_mqtt`               | `json`    | `broker`                              | **required** | Your MQTT Broker IP. Eg. 192.168.0.5.
-| `CONF_mqtt`               | `json`    | `port`                                | 1883         | Your MQTT Broker Port. If no value is given, port 1883 will be used.  |
-| `CONF_mqtt`               | `json`    | `username`                            | optional     | MQTT Username for your broker.
-| `CONF_mqtt`               | `json`    | `password`                            | optional     | MQTT Password for your broker.
-| `CONF_volvoData`          | `json`    | `username`                            | **required** | Normally your email address to login into the Volvo App.
-| `CONF_volvoData`          | `json`    | `password`                            | **required** | Your password to login into the Volvo App.
-| `CONF_volvoData`          | `json`    | `vin`                                 | optional     | A single VIN like "VIN1" or a list of VINs like "["VIN1", "VIN2"]". Leave this empty if you don't know your VIN. The addon will use every car that is tied to your account.
-| `CONF_volvoData`          | `json`    | `vccapikey`                           | **required** | VCCAPIKEY linked with your volvo developer account. Get your Vccapi key from [here](https://developer.volvocars.com/account/). <b>Starting version 1.8.0, it is possible to define multiple keys, like this: `["vccapikey1", "vccapikey2", "vccapikey3", "etc..."]`</b>
-| `CONF_volvoData`          | `json`    | `odometerMultiplier`                  | optional     | The multiplier value for the odometer value, as the volvo api delivers inconsistent data. For some cars this setting is 10, for some 1. Try what's right for your car. If you leave it empty, the multiplier will be 1.
-| `CONF_volvoData`          | `json`    | `averageSpeedDivider`                 | optional     | The divider value for the average speed value, as the volvo api delivers inconsistent data. For some cars this setting is 10, for some 1. Try what's right for your car. If you leave it empty, the divider will be 1.
-| `CONF_volvoData`          | `json`    | `averageFuelConsumptionMultiplier`    | optional     | The multiplier value for the average fuel consumption value, as the volvo api delivers inconsistent data. For some cars this setting is 10, for some 1. Try what's right for your car. If you leave it empty, the multiplier will be 1.
-| `CONF_debug`              | `string`  |                                       | optional     | Debug option (true/false). Normally you don't need this. |
-| `TZ`                      | `string`  |                                       | **required** | Container timezone eg "Europe/Berlin" from [here](https://docs.diladele.com/docker/timezones.html)|
+5. Paste the OTP code to the prompt on the command line
+6. Now the script should be running and you can send the process to the background by typing ^Z bg and close the terminal
 
 
-[aarch64-shield]: https://img.shields.io/badge/aarch64-yes-green.svg
-[amd64-shield]: https://img.shields.io/badge/amd64-yes-green.svg
-[armhf-shield]: https://img.shields.io/badge/armhf-yes-green.svg
-[armv7-shield]: https://img.shields.io/badge/armv7-yes-green.svg
-[i386-shield]: https://img.shields.io/badge/i386-yes-green.svg
-[releases]: https://github.com/Dielee/volvo2mqtt/releases
-[releases-shield]: https://img.shields.io/github/release/Dielee/volvo2mqtt.svg
-[maintenance-shield]: https://img.shields.io/maintenance/yes/2024.svg
-[commits-shield]: https://img.shields.io/github/commit-activity/y/Dielee/volvo2mqtt.svg
-[commits]: https://github.com/Dielee/volvo2mqtt/commits/main
+## evcc setup
+<b>evcc.yaml:</b>
+This example assumes that the service is running on `192.168.0.1` port `8182`. Your VIN is used to distingiush different cars, in case that you have multiple cars registered with your VOLVO ID. So please replace "YOUR_VIN" with the correct VIN, even if you have only one car.
+```
+vehicles:
+- type: custom
+  title: My VOLVO
+  name: ev5
+  capacity: 83
+  soc:
+    source: http 
+    uri: http://192.168.0.1:8182/data
+    method: GET
+    jq: .data.YOUR_VIN.battery_charge_level 
+  range:
+    source: http
+    uri: http://192.168.0.1:8182/data
+    method: GET
+    jq: .data.YOUR_VIN.electric_range 
+  odometer:
+    source: http
+    uri: http://192.168.0.1:8182/data
+    method: GET
+    jq: .data.YOUR_VIN.odometer
+```
+
+### TODOs
+* URL and PORT is currently hardcoded in main.py - Please change it there to your needs.
+* Cleanup code and configs from mqtt code
+
+<b>NOTE: This is the first version, currently tested with my car. Working so far, but still in ALPHA status</b>
