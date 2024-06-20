@@ -23,6 +23,7 @@ ENGINE_DIAGNOSTICS_URL = "https://api.volvocars.com/connected-vehicle/v2/vehicle
 VEHICLE_DIAGNOSTICS_URL = "https://api.volvocars.com/connected-vehicle/v2/vehicles/{0}/diagnostics"
 WARNINGS_URL = "https://api.volvocars.com/connected-vehicle/v2/vehicles/{0}/warnings"
 API_BACKEND_STATUS = "https://oip-dev-bff.euwest1.production.volvo.care/api/v1/backend-status"
+BATTERY_SOC_URL = "https://api.volvocars.com/energy/v1/vehicles/{0}/recharge-status/battery-charge-level"
 
 LENGTH_KILOMETERS = "km"
 SPEED_KILOMETERS_PER_HOUR = "km/h"
@@ -90,7 +91,7 @@ icon_states = {
 }
 
 supported_entities = [
-                        {"name": "Battery Charge Level", "domain": "sensor", "device_class": "battery", "id": "battery_charge_level", "unit": "%", "icon": "car-battery", "url": RECHARGE_STATE_URL, "state_class": "measurement"},
+                        {"name": "Battery Charge Level", "domain": "sensor", "device_class": "battery", "id": "battery_charge_level", "unit": "%", "icon": "car-battery", "url": BATTERY_SOC_URL, "state_class": "measurement"},
                         {"name": "Battery Charge Level", "domain": "sensor", "device_class": "battery", "id": "battery_charge_level", "unit": "%", "icon": "car-battery", "url": FUEL_BATTERY_STATE_URL, "state_class": "measurement"},
                         {"name": "Battery Capacity", "domain": "sensor", "device_class": "energy_storage", "id": "battery_capacity", "unit": ENERGY_KILO_WATT_HOUR, "icon": "car-battery", "url": VEHICLE_DETAILS_URL, "state_class": "measurement"},
                         {"name": "Electric Range", "domain": "sensor", "id": "electric_range", "unit": LENGTH_KILOMETERS if not units.get(settings["babelLocale"]) else units[settings["babelLocale"]]["electric_range"]["unit"], "icon": "map-marker-distance", "url": RECHARGE_STATE_URL, "state_class": "measurement"},
