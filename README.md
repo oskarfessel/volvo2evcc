@@ -10,7 +10,7 @@ As of version <b>v1.9.0</b>, this addon uses the same OTP authentication as the 
 The following steps are required for authentication in exactly this order:
 
 1. Setup volvo2evcc, by checking out this repository
-2. Enter your settings into settings.json and start volvo2evcc with Python3 (python3 volvo2evcc.py)
+2. Enter your settings into settings.json and start volvo2evcc with Python3 (python3 main.py)
 3. The script logs in using your credentials from settings.json and an e-mail to your VOLVO ID mail should be generated
 4. Now, open your mailbox and copy your OTP Code
 5. Paste the OTP code to the prompt on the command line
