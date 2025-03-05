@@ -37,9 +37,13 @@ def authorize(renew_tokenfile=False):
     if os.path.isfile(".token") and not renew_tokenfile:
         logging.info("Using login from token file")
         f = open('.token')
-        data = json.load(f)
-        refresh_token = data["refresh_token"]
-        refresh_auth()
+        try:
+            data = json.load(f)
+            refresh_token = data["refresh_token"]
+            refresh_auth()
+        except ValueError:
+            logging.warning("Detected corrupted token file, restarting auth process")
+            authorize(True)
     else:
         logging.info("Starting login with OTP")
         auth_session = requests.session()
@@ -178,6 +182,7 @@ def refresh_auth():
         token_expires_at = datetime.now(util.TZ) + timedelta(seconds=(data["expires_in"] - 30))
         refresh_token = data["refresh_token"]
     else:
+        logging.warning("Refreshing credentials failed!: " + str(auth.status_code) + " Message: " + auth.text)
         authorize(renew_tokenfile=True)
 
 
@@ -290,9 +295,17 @@ def check_vcc_api_key(test_key, extended_until=None):
                 logging.warning("VCCAPIKEY " + test_key + " is extended and will be reusable at: "
                                 + format_datetime(extended_until, format="medium", locale=settings["babelLocale"]))
         else:
-            logging.warning("VCCAPIKEY " + test_key + " isn't working! " + data["error"]["message"])
+            if "error" in data:
+                logging.warning("VCCAPIKEY " + test_key + " isn't working! " + data["error"]["message"])
+            else:
+                logging.warning("VCCAPIKEY " + test_key + " isn't working! Statuscode " + str(response.status_code) +
+                                " Message: " + response.text)
     else:
-        logging.warning("VCCAPIKEY " + test_key + " isn't working! " + data["error"]["message"])
+        if "error" in data:
+            logging.warning("VCCAPIKEY " + test_key + " isn't working! " + data["error"]["message"])
+        else:
+            logging.warning("VCCAPIKEY " + test_key + " isn't working! Statuscode " + str(response.status_code) +
+                            " Message: " + response.text)
     return True, extended_until
 
 
@@ -568,14 +581,7 @@ def parse_api_data(data, sensor_id=None):
     elif sensor_id == "lock_status":
         return data["centralLock"]["value"] if util.keys_exists(data, "centralLock") else None
     elif sensor_id == "odometer":
-        multiplier = 1
-        if util.keys_exists(settings["volvoData"], "odometerMultiplier"):
-            multiplier = settings["volvoData"]["odometerMultiplier"]
-            if isinstance(multiplier, str):
-                multiplier = 1
-            elif multiplier < 1:
-                multiplier = 1
-        return util.convert_metric_values(int(data["odometer"]["value"]) * multiplier) \
+        return util.convert_metric_values(int(data["odometer"]["value"])) \
             if util.keys_exists(data, "odometer") else None
     elif sensor_id == "window_front_left":
         return window_states[data["frontLeftWindow"]["value"]] if util.keys_exists(data, "frontLeftWindow") \
@@ -624,29 +630,22 @@ def parse_api_data(data, sensor_id=None):
         return None
     elif sensor_id == "average_fuel_consumption":
         if util.keys_exists(data, "averageFuelConsumption"):
+            average_fuel_con = 0
             average_fuel_con = float(data["averageFuelConsumption"]["value"])
-            if average_fuel_con > 0:
-                multiplier = 1
-                if util.keys_exists(settings["volvoData"], "averageFuelConsumptionMultiplier"):
-                    multiplier = settings["volvoData"]["averageFuelConsumptionMultiplier"]
-                    if isinstance(multiplier, str):
-                        multiplier = 1
-                    elif multiplier < 1:
-                        multiplier = 1
-                return average_fuel_con * multiplier
+        elif util.keys_exists(data, "averageFuelConsumptionAutomatic"):
+            average_fuel_con = float(data["averageFuelConsumptionAutomatic"]["value"])
+        if average_fuel_con > 0:
+            return average_fuel_con
         return None
     elif sensor_id == "average_speed":
+        average_speed = 0
         if util.keys_exists(data, "averageSpeed"):
             average_speed = float(data["averageSpeed"]["value"])
-            if average_speed > 1:
-                divider = 1
-                if util.keys_exists(settings["volvoData"], "averageSpeedDivider"):
-                    divider = settings["volvoData"]["averageSpeedDivider"]
-                    if isinstance(divider, str):
-                        divider = 1
-                    elif divider < 1:
-                        divider = 1
-                return util.convert_metric_values(average_speed / divider)
+        elif util.keys_exists(data, "averageSpeedAutomatic"):
+            average_speed = float(data["averageSpeedAutomatic"]["value"])
+
+        if average_speed != 0:
+            return util.convert_metric_values(average_speed)
         return None
     elif sensor_id == "location":
         coordinates = {}
@@ -685,7 +684,15 @@ def parse_api_data(data, sensor_id=None):
     elif sensor_id == "service_warning_status":
         return data["serviceWarning"]["value"] if util.keys_exists(data, "serviceWarning") else None
     elif sensor_id == "average_energy_consumption":
-        return data["averageEnergyConsumption"]["value"] if util.keys_exists(data, "averageEnergyConsumption") else None
+        average_energy_con = 0
+        if util.keys_exists(data, "averageEnergyConsumption"):
+            average_energy_con = data["averageEnergyConsumption"]["value"]
+        elif util.keys_exists(data, "averageEnergyConsumptionAutomatic"):
+            average_energy_con = data["averageEnergyConsumptionAutomatic"]["value"]
+
+        if average_energy_con != 0:
+            return average_energy_con
+        return None
     elif sensor_id == "washer_fluid_warning":
         return data["washerFluidLevelWarning"]["value"] if util.keys_exists(data, "washerFluidLevelWarning") else None
     elif sensor_id == "warnings":
